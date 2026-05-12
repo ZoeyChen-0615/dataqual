@@ -239,7 +239,7 @@ Once the server is running:
 ```bash
 curl http://127.0.0.1:8000/health
 ```
-
+![health](image.png)
 Example response:
 
 ```json
@@ -254,11 +254,15 @@ curl http://127.0.0.1:8000/rules
 
 ### View all results
 
+This returns historical results stored in the database, including older generated data if the same `dataqual.db` file is reused.
+
 ```bash
 curl http://127.0.0.1:8000/results
 ```
 
 ### View only failures
+
+Use `passed=false` if you only want failed rule results instead of the full history.
 
 ```bash
 curl "http://127.0.0.1:8000/results?passed=false"
@@ -301,7 +305,6 @@ Run Ruff:
 ```bash
 uv run --extra dev ruff check dataqual tests
 ```
-
 
 
 
