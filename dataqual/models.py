@@ -45,6 +45,17 @@ class Schema:
         ]
 
 
+
+
+
+@dataclass(slots=True)
+class ValidationContext:
+    record_index: int
+    batch_records: list[dict[str, Any]]
+    seen_unique_values: dict[str, set[Any]] = field(default_factory=dict)
+    numeric_stats: dict[str, tuple[float, float]] = field(default_factory=dict)
+
+
 @dataclass(slots=True)
 class RuleResult:
     rule_name: str
@@ -63,16 +74,7 @@ class RuleResult:
             "field": self.field,
             "message": self.message,
         }
-
-
-@dataclass(slots=True)
-class ValidationContext:
-    record_index: int
-    batch_records: list[dict[str, Any]]
-    seen_unique_values: dict[str, set[Any]] = field(default_factory=dict)
-    numeric_stats: dict[str, tuple[float, float]] = field(default_factory=dict)
-
-
+    
 @dataclass(slots=True)
 class RecordValidationResult:
     record_index: int
