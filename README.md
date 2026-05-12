@@ -251,7 +251,7 @@ Example response:
 ```bash
 curl http://127.0.0.1:8000/rules
 ```
-
+![rules](image-3.png)
 ### View all results
 
 This returns historical results stored in the database, including older generated data if the same `dataqual.db` file is reused.
@@ -267,13 +267,13 @@ Use `passed=false` if you only want failed rule results instead of the full hist
 ```bash
 curl "http://127.0.0.1:8000/results?passed=false"
 ```
-
+![results](image-2.png)
 ### View stats
 
 ```bash
 curl "http://127.0.0.1:8000/stats?window=24h"
 ```
-
+![stats](image-1.png)
 ### Trigger manual validation
 
 ```bash
