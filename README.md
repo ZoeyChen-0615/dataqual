@@ -94,7 +94,7 @@ Current rules include:
 - type check
 - range check
 - uniqueness check
-- anomaly check
+- anomaly check using z-score
 
 ### `dataqual/engine.py`
 
@@ -305,6 +305,5 @@ Run Ruff:
 ```bash
 uv run --extra dev ruff check dataqual tests
 ```
-
 
 
