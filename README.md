@@ -291,7 +291,7 @@ curl -X POST http://127.0.0.1:8000/validate \
     ]
   }'
 ```
-
+![oneline](image-4.png)
 ## Testing
 
 Run tests:
