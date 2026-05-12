@@ -1,35 +1,29 @@
 # DataQual
 
-DataQual is a real-time data quality monitoring system built in Python. It simulates a stream of event records, validates those records with a decorator-registered rule system, stores validation history in SQLite, and exposes a FastAPI API for querying current and historical quality results.
+DataQual is a real-time data quality monitoring system in Python. It simulates a stream of event records, validates those records with a rule system, stores validation history in SQLite, and exposes a FastAPI API for querying results and statistics.
 
-The project is designed to satisfy the course goals around packaging, typing, testing, async programming, and non-trivial Python architecture. The core idea is to make the system feel more like a small production service than a one-off script: records are generated continuously, validated in batches, written to persistent storage, and then inspected through both CLI and HTTP interfaces.
+The project is built as a small end-to-end system rather than a single script. It has a running pipeline, validation rules, persistent storage, a web API, and CLI commands for starting the system or running manual validation.
 
-## Demo Visual
+## Demo
 
-![DataQual architecture](docs/architecture.svg)
+In a demo, I start the full system with one command. After that:
+
+- the producer keeps generating fake event data
+- the consumer validates each batch
+- the validation results are written into SQLite
+- I can open API endpoints like `/health`, `/rules`, `/results`, and `/stats`
+- I can also run a manual validation on a CSV file and compare that result with the automatically generated data
+
+So the demo shows both continuous validation and one-off validation.
 
 ## Features
 
-- Async producer-consumer pipeline built with `asyncio`
-- Decorator-based validation rule registry
-- Batch validation engine with per-record and per-rule results
+- async producer-consumer pipeline built with `asyncio`
+- decorator-based validation rule registry
+- batch validation engine
 - SQLite persistence through `aiosqlite`
-- FastAPI API for health checks, rule listing, validation, results, and stats
-- Click-based CLI for running the full system or one-off validation
-- Typed codebase with `mypy`
-- Automated tests with `pytest`
-
-## Why This Project Is Interesting
-
-This is not just a CSV checker or a basic CRUD API. The project combines:
-
-- synthetic streaming data generation
-- async batch processing
-- metaprogramming through a global rule registry
-- historical storage and querying
-- both CLI and web interfaces
-
-That combination gives the project a more systems-oriented feel than a single-script validator.
+- FastAPI API for health checks, rules, results, and stats
+- CLI commands for running the system or validating a file
 
 ## Project Structure
 
@@ -55,8 +49,6 @@ dataqual_project/
     test_pipeline.py
     test_rules.py
     test_storage.py
-  docs/
-    architecture.svg
   pyproject.toml
   README.md
 ```
@@ -65,90 +57,95 @@ dataqual_project/
 
 At a high level the system works like this:
 
-1. `DataProducer` generates synthetic event records in batches.
-2. Those batches are pushed into an `asyncio.Queue`.
-3. `DataConsumer` pulls batches from the queue.
-4. `ValidationEngine` runs every selected validation rule on each record.
-5. `StorageManager` writes run summaries and detailed rule results into SQLite.
-6. The FastAPI app exposes HTTP endpoints for querying rules, runs, results, and aggregate statistics.
+1. `DataProducer` generates synthetic event records in batches
+2. those batches are pushed into an `asyncio.Queue`
+3. `DataConsumer` pulls batches from the queue
+4. `ValidationEngine` runs validation rules on each record
+5. `StorageManager` writes run summaries and rule results into SQLite
+6. the FastAPI app exposes endpoints for querying rules, results, and stats
 
-### Main Modules
+## File Overview
 
-#### `dataqual/models.py`
+### `dataqual/models.py`
 
-Defines the main data structures used everywhere else:
+Defines the main data structures used across the project.
 
-- `FieldSpec`: one field definition in the schema
-- `Schema`: the overall expected shape of input records
-- `RuleResult`: result of one rule on one record
-- `RecordValidationResult`: all rule results for one record
-- `ValidationRunResult`: summary for an entire validation batch
-- helper functions such as `default_schema()` and `build_numeric_stats()`
+- schema definitions
+- rule result objects
+- record-level result objects
+- run-level result objects
+- helper functions for default schema and numeric statistics
 
-#### `dataqual/rules/registry.py`
+### `dataqual/rules/registry.py`
 
-Implements the decorator-based metaprogramming component.
+Handles rule registration.
 
-- `RuleRegistry.register(...)` creates a decorator that auto-registers a rule
-- `RuleRegistry.get_all_rules()` returns the globally registered rules
-- `RuleRegistry.get_rule(name)` returns one rule by name
+- stores all registered rules
+- provides the decorator used to register a new rule
+- lets the engine fetch rules by name or list all rules
 
-This is the part that satisfies the metaprogramming requirement most directly.
+### `dataqual/rules/builtin.py`
 
-#### `dataqual/rules/builtin.py`
+Contains the built-in validation rules.
 
-Contains the built-in validation rules:
+Current rules include:
 
-- `null_check`
-- `type_check`
-- `range_check`
-- `uniqueness_check`
-- `anomaly_check`
+- null check
+- type check
+- range check
+- uniqueness check
+- anomaly check
 
-Each rule is decorated with `@RuleRegistry.register(...)`, so the validation engine does not need to be edited when new rules are added.
+### `dataqual/engine.py`
 
-#### `dataqual/engine.py`
+Runs the validation process.
 
-This is the validation orchestrator.
+Important jobs:
 
-- chooses which rules to run
-- builds per-record validation context
-- runs each rule
-- assembles `ValidationRunResult`
+- choose which rules to run
+- validate a whole batch
+- validate one record
+- assemble the final validation result
 
-#### `dataqual/pipeline/producer.py`
+### `dataqual/pipeline/producer.py`
 
-Simulates a live data source.
+Simulates incoming data.
 
-- generates records continuously
-- injects occasional data quality problems
-- sends batches into the queue
+Important jobs:
 
-#### `dataqual/pipeline/consumer.py`
+- generate fake records
+- inject occasional bad data
+- push batches into the queue
 
-Simulates a validation worker.
+### `dataqual/pipeline/consumer.py`
 
-- reads batches from the queue
-- sends them into the validation engine
-- persists the result through storage
+Processes incoming batches.
 
-#### `dataqual/storage.py`
+Important jobs:
 
-Owns all SQLite interactions.
+- read from the queue
+- send data to the validation engine
+- save results to storage
 
-- creates tables
-- saves validation runs
-- saves detailed rule results
-- queries history
-- computes time-window statistics
+### `dataqual/storage.py`
 
-#### `dataqual/api.py`
+Owns all database work.
 
-Defines the FastAPI application and HTTP endpoints.
+Important jobs:
 
-#### `dataqual/__main__.py`
+- create tables
+- save validation runs
+- save detailed rule results
+- query historical results
+- compute aggregate stats
 
-Defines the CLI entry points:
+### `dataqual/api.py`
+
+Defines the FastAPI app and the HTTP endpoints.
+
+### `dataqual/__main__.py`
+
+Defines the CLI commands:
 
 - `start`
 - `serve`
@@ -185,16 +182,7 @@ Stores one row per rule result:
 - `message`
 - `created_at`
 
-This two-table structure makes it easy to query either batch-level summaries or detailed failures.
-
-## Installation
-
-### Prerequisites
-
-- Python 3.12+
-- [`uv`](https://docs.astral.sh/uv/)
-
-### Setup
+## Setup
 
 From the project root:
 
@@ -204,12 +192,6 @@ uv sync --extra dev
 ```
 
 ## Running The Project
-
-Because the module form is the most reliable in the current local setup, use:
-
-```bash
-uv run python -m dataqual ...
-```
 
 ### Start full system
 
@@ -240,6 +222,8 @@ Runs one-off validation against local CSV input:
 ```bash
 uv run python -m dataqual validate --file sample.csv
 ```
+
+You need to edit `sample.csv` to match the kind of data you want to test in this project.
 
 ### List rules in the terminal
 
@@ -305,24 +289,7 @@ curl -X POST http://127.0.0.1:8000/validate \
   }'
 ```
 
-## Sample CSV For Manual Validation
-
-```csv
-id,user_id,event_type,amount,timestamp
-1,100,purchase,20.5,2026-05-12T10:00:00+00:00
-2,,refund,-5,2026-05-12T10:01:00+00:00
-1,300,click,99999,2026-05-12T10:02:00+00:00
-bad,400,signup,10,2026-05-12T10:03:00+00:00
-```
-
-This sample intentionally triggers:
-
-- null failures
-- type failures
-- range failures
-- duplicate failures
-
-## Testing, Linting, and Typing
+## Testing
 
 Run tests:
 
@@ -342,66 +309,16 @@ Run mypy:
 uv run --extra dev mypy dataqual
 ```
 
-## Code Documentation Notes
-
-The codebase includes lightweight inline comments throughout `dataqual/` to make the main methods easier to read quickly. The comments are intentionally short and focus on:
-
-- what a method does
-- what shape its output has
-- small example outputs for result-producing methods
-
-This keeps the code explainable without overwhelming the implementation.
-
-## Requirements Mapping
-
-### R1 Complete Python application
-
-- packaged with `pyproject.toml`
-- runnable with `uv`
-- CLI and API both available
-
-### R2 Well-tested
-
-- unit tests for rules, engine, storage
-- async tests for pipeline
-- integration tests for API
-
-### R3 Well-typed
-
-- project uses type annotations throughout
-- checked with `mypy`
-
-### R4 Documentation
-
-- this README documents setup, architecture, code structure, and usage
-- repository includes a visual architecture diagram
-
-### R5 Advanced feature
-
-- async pipeline with `asyncio`
-- metaprogramming through decorator-based rule registration
-
-### R6 Code quality
-
-- modular architecture
-- linted with Ruff
-- tested and typed
-
-### R7 Novelty
-
-- combines streaming simulation, validation rules, persistence, and querying
-
 ## Current Limitations
 
-- rule addition still requires writing Python code rather than pure configuration
-- the API currently returns JSON directly and does not include a dedicated frontend
+- adding a new rule still requires writing Python code
+- the API currently returns JSON directly and does not have a dedicated frontend
 - anomaly detection is intentionally simple and uses a z-score heuristic
 
 ## Future Improvements
 
 - richer filtering and query options
 - more configurable schemas
-- plugin-style rule discovery from separate files or packages
 - cleaner dashboard-style result presentation
 - additional anomaly detection strategies
 
