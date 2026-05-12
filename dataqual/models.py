@@ -27,9 +27,9 @@ class Schema:
 
     # grab one field spec
     def get_field(self, name: str) -> FieldSpec | None:
-        for field in self.fields:
-            if field.name == name:
-                return field
+        for field_spec in self.fields:
+            if field_spec.name == name:
+                return field_spec
         return None
 
     # only unique ones

@@ -187,7 +187,6 @@ Stores one row per rule result:
 From the project root:
 
 ```bash
-cd "/Users/zoeychen/Desktop/Adv python/dataqual_project"
 uv sync --extra dev
 ```
 
@@ -223,7 +222,7 @@ Runs one-off validation against local CSV input:
 uv run python -m dataqual validate --file sample.csv
 ```
 
-You need to edit `sample.csv` to match the kind of data you want to test in this project.
+If you only want to test different values, edit `sample.csv`. If you want a different field structure, also update the project schema in `dataqual/models.py` and any related validation rules.
 
 ### List rules in the terminal
 
@@ -303,25 +302,6 @@ Run Ruff:
 uv run --extra dev ruff check dataqual tests
 ```
 
-Run mypy:
 
-```bash
-uv run --extra dev mypy dataqual
-```
 
-## Current Limitations
 
-- adding a new rule still requires writing Python code
-- the API currently returns JSON directly and does not have a dedicated frontend
-- anomaly detection is intentionally simple and uses a z-score heuristic
-
-## Future Improvements
-
-- richer filtering and query options
-- more configurable schemas
-- cleaner dashboard-style result presentation
-- additional anomaly detection strategies
-
-## Repository
-
-- GitHub: [ZoeyChen-0615/dataqual](https://github.com/ZoeyChen-0615/dataqual)
