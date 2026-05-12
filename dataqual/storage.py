@@ -94,6 +94,7 @@ class StorageManager:
         self,
         rule: str | None = None,
         severity: str | None = None,
+        passed: bool | None = None,
         from_dt: datetime | None = None,
         to_dt: datetime | None = None,
     ) -> list[dict[str, Any]]:
@@ -105,6 +106,9 @@ class StorageManager:
         if severity:
             clauses.append("severity = ?")
             params.append(severity)
+        if passed is not None:
+            clauses.append("passed = ?")
+            params.append(int(passed))
         if from_dt:
             clauses.append("created_at >= ?")
             params.append(from_dt.isoformat())

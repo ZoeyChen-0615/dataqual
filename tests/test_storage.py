@@ -34,10 +34,13 @@ async def test_storage_saves_and_queries_results(tmp_path) -> None:
 
     await storage.save_run(run)
     results = await storage.get_results(rule="null_check")
+    failed_results = await storage.get_results(rule="null_check", passed=False)
     stats = await storage.get_stats(window_hours=24)
     fetched_run = await storage.get_run(run.run_id)
 
     assert len(results) == 1
+    assert len(failed_results) == 1
+    assert failed_results[0]["passed"] == 0
     assert results[0]["field"] == "user_id"
     assert stats["failures_by_rule"]["null_check"] == 1
     assert fetched_run is not None

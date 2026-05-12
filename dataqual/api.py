@@ -95,12 +95,14 @@ def create_app(
     async def query_results(
         rule: str | None = None,
         severity: str | None = None,
+        passed: bool | None = None,
         from_dt: str | None = Query(default=None, alias="from"),
         to_dt: str | None = Query(default=None, alias="to"),
     ) -> list[dict[str, Any]]:
         results: list[dict[str, Any]] = await app.state.storage.get_results(
             rule=rule,
             severity=severity,
+            passed=passed,
             from_dt=_parse_datetime(from_dt),
             to_dt=_parse_datetime(to_dt),
         )
