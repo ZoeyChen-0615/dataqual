@@ -34,6 +34,9 @@ async def test_api_manual_validate_and_fetch_results(tmp_path) -> None:
             )
             assert response.status_code == 200
             payload = response.json()
+            assert payload["total_records"] == 1
+            assert payload["pass_count"] == 0
+            assert payload["fail_count"] == 1
 
             run_response = await client.get(f"/results/{payload['run_id']}")
             failed_results_response = await client.get("/results?passed=false")

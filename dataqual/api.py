@@ -84,11 +84,17 @@ def create_app(
         ]
 
     @app.post("/validate")
-    # sample {"run_id": "...", "results": [...]}
+    # sample {"run_id": "...", "pass_count": 3, "results": [...]}
     async def manual_validate(payload: ValidateRequest) -> dict[str, Any]:
         run = await app.state.engine.validate_batch(payload.data, triggered_by="manual")
         await app.state.storage.save_run(run)
-        return {"run_id": run.run_id, "results": run.to_dict()["results"]}
+        return {
+            "run_id": run.run_id,
+            "total_records": run.total_records,
+            "pass_count": run.pass_count,
+            "fail_count": run.fail_count,
+            "results": run.to_dict()["results"],
+        }
 
     @app.get("/results")
     # filtered history rows
