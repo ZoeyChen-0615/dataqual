@@ -306,4 +306,57 @@ Run Ruff:
 uv run --extra dev ruff check dataqual tests
 ```
 
+## Code Review
+
+### Who reviewed my code / when
+
+- Reviewer: Jason Diaz Aguas <jdaguas@uchicago.edu>
+- Date: 2026/05/18
+
+### Commit and files reviewed
+
+- Commit reviewed: `b9b0585325d10e83ea5187e7c0d9bd23e9d3a1d2`
+- Files discussed:
+  - `dataqual/pipeline/producer.py`
+  - `dataqual/pipeline/consumer.py`
+  - `dataqual/engine.py`
+  - `dataqual/rules/registry.py`
+  - `dataqual/storage.py`
+  - `dataqual/api.py`
+
+### Questions I asked the reviewer to focus on
+
+1. Does the overall architecture make sense, especially the way the pipeline, validation engine, rule registry, and storage layer fit together?
+2. Do the async pipeline and rule registration system feel like solid implementations, or are there places where the design could be simpler or clearer?
+3. Is the storage/API flow easy to follow, and are there any improvements that would make the system easier to use?
+
+### Reviewer responses
+
+1. The project architecture makes sense to me and presumably to other users. The core architecture is solid and has a good layered design.
+
+2. One possible improvement would be to add slightly more lifecycle handling around the pipeline. In its current iteration,  the consumer waits on queue.get(), so if stop() is called while the queue is empty, the loop may still be blocked unless the task is cancelled. The CLI does cancel the tasks during shutdown whic works but using a sentinel value like None or adding timeout-based polling could make shutdown behavior clearer.
+
+3. For the async producer-consumer pipeline, I would suggest is setting a maxsize on the queue. Currently, the queue is created with no limit, so if the producer becomes much faster than the consumer or storage slows down, batches could build up indefinitely. Another possible improvement is to track pipeline metrics, such as queue size, batches produced, batches consumed, and batches failed. Since the project already has a /health endpoint, it could eventually include something like queue depth or processed batch count.
+
+4. For the validation engine, I especially like the use of ValidationContext. That gives rules access to batch-level information such as seen unique values and numeric statistics  which don't make each rule recompute those things independently. 
+One design question: validate_record is async, but the individual rule functions are synchronous. It's perfectly fine, but since the engine awaits validate_record, it might be worth deciding whether future rules are expected to be async. If not, the async layer could be simplified. If yes, the registry type could eventually support async rule functions too.
+
+5. One final improvement would be returning more summary information from /validate.  The pass/fail counts aren't called unless the caller separately looks up the run. Since the engine already calculates total_records, pass_count, and fail_count, returning those fields would make the manual validation endpoint more useful.
+
+
+### Discussion notes
+
+- I learned that the overall architecture was understandable to another developer, especially the separation between the pipeline, validation engine, rule registry, storage, and API.
+- I also learned that even when the core design is solid, small interface changes can still improve usability. The reviewer’s point about returning summary fields from `/validate` was especially useful because it made the manual validation flow clearer and easier to test.
+
+### What changes this review led to
+
+- I updated the `/validate` endpoint in `dataqual/api.py` so it now returns `total_records`, `pass_count`, and `fail_count` together with `run_id` and `results`.
+- I also updated `tests/test_api.py` to check those new response fields.
+
+
+### Why the other review suggestions did not lead to changes
+
+- I did not change the shutdown logic because this pipeline is currently coordinated through task cancellation. Adding a sentinel-based shutdown path would introduce a second shutdown mechanism, which does not fit the current control flow as cleanly.
+- I did not add a queue `maxsize` because the current pipeline is designed as a simple always-running stream. A bounded queue would require an explicit backpressure policy between producer speed, consumer speed, and storage writes, and that behavior is not defined in the current design.
 
